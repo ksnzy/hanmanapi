@@ -1,5 +1,7 @@
-from fastapi import FastAPI
-from app.models.users import Loginschema, SignupSchema
+from fastapi import FastAPI, Depends
+from sqlalchemy.orm import Session
+from app.models.users import Loginschema, SignupSchema, User
+from app.database import get_db
 app = FastAPI()
 
 
@@ -13,10 +15,13 @@ async def userlogin(user: Loginschema):
     return{"UserID": user.email, "passwd": user.pwd}
 
 @app.post("/signup")
-async def signupuser(newuser: SignupSchema):
-    print( f"new signup attemp by{newuser.email}")
-    return{"message": "Signup Recieved", "email": newuser.email,
-           "name": newuser.name}
+async def signupuser(newuser: SignupSchema, db: Session = Depends(get_db)):
+    new_user = User(email=newuser.email, pwd= newuser.password, name = newuser.name)
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+    return {"message": "user created", "id": new_user.id, "email": new_user.email}
+    
     
 
 
