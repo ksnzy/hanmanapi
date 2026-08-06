@@ -14,6 +14,14 @@ class SignupSchema(BaseModel):
     password: str
     name: str
 
+class Document(BaseModel):
+    name : str
+    department : str
+    version : float
+    uploaded_by: int
+    created_date: str
+    status: str
+
 class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key = True, index=True)
