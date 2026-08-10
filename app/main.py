@@ -3,8 +3,8 @@ from sqlalchemy.orm import Session
 from app.models.users import Loginschema, SignupSchema, User
 from app.database import get_db
 from app.hashing import verify_password, hash_password
-from app.auth import create_access_token
-
+from app.auth import create_access_token, get_current_user
+from app.models.documents import Document , DocumentCreate
 
 
 
@@ -38,6 +38,21 @@ async def signupuser(newuser: SignupSchema, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(new_user)
     return {"message": "user created", "id": new_user.id, "email": new_user.email}
+
+@app.post("/documents")
+def upload_document(doc: DocumentCreate, db : Session = Depends(get_db),current_user: dict = Depends(get_current_user)):
+    new_doc = Document(filename = doc.filename, content = doc.content, uploaded_by = current_user["user_id"]
+    )
+    db.add(new_doc)
+    db.commit()
+    db.refresh(new_doc)
+    return {"message": "document uploaded", "id": new_doc.id, "filename": new_doc.filename}
+
+
+@app.get("/all_documents")
+def get_all_documents(db: Session = Depends(get_db),current_user: dict = Depends(get_current_user)):
+    all_docs = db.query(Document).filter(Document.is_active == True).all()
+    return all_docs
     
     
 
