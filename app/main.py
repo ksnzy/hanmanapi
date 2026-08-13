@@ -4,7 +4,9 @@ from app.models.users import Loginschema, SignupSchema, User
 from app.database import get_db
 from app.hashing import verify_password, hash_password
 from app.auth import create_access_token, get_current_user
-from app.models.documents import Document , DocumentCreate
+from app.models.documents import Document , DocumentCreate, Chunk
+from app.embeddings import get_embedding, chunk_text
+import json
 
 
 
@@ -39,14 +41,35 @@ async def signupuser(newuser: SignupSchema, db: Session = Depends(get_db)):
     db.refresh(new_user)
     return {"message": "user created", "id": new_user.id, "email": new_user.email}
 
+
+
 @app.post("/documents")
-def upload_document(doc: DocumentCreate, db : Session = Depends(get_db),current_user: dict = Depends(get_current_user)):
-    new_doc = Document(filename = doc.filename, content = doc.content, uploaded_by = current_user["user_id"]
+async def upload_document(
+    doc: DocumentCreate,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    new_doc = Document(
+        filename=doc.filename,
+        content=doc.content,
+        uploaded_by=current_user["user_id"]
     )
     db.add(new_doc)
     db.commit()
     db.refresh(new_doc)
-    return {"message": "document uploaded", "id": new_doc.id, "filename": new_doc.filename}
+
+    text_chunks = chunk_text(doc.content)
+    for chunk_str in text_chunks:
+        vector = get_embedding(chunk_str)
+        new_chunk = Chunk(
+            document_id=new_doc.id,
+            text=chunk_str,
+            embedding=json.dumps(vector)
+        )
+        db.add(new_chunk)
+    db.commit()
+
+    return {"message": "document uploaded and embedded", "id": new_doc.id, "chunks_created": len(text_chunks)}
 
 
 @app.get("/all_documents")

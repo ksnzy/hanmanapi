@@ -16,3 +16,10 @@ class Document(Base):
 class DocumentCreate(BaseModel):
     filename : str
     content : str
+
+class Chunk(Base):
+    __tablename__ = 'chunks'
+    id = Column(Integer, primary_key=True, index=True)
+    document_id = Column(Integer, ForeignKey("documents.id"))
+    text = Column(String)
+    embedding = Column(String)
